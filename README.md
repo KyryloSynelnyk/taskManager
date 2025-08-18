@@ -2,7 +2,19 @@
 
 Kanban board with nested modals, Formik + Yup, file attachments, and local persistence.
 
+## Getting Started
+
+Install dependencies and run the dev server:
+
+```bash
+npm install
+npm run dev
+```
+
+Visit http://localhost:5173
+
 ## Tech
+
 - React 18 + TypeScript + Vite
 - Tailwind CSS
 - Formik + Yup
@@ -12,7 +24,7 @@ Kanban board with nested modals, Formik + Yup, file attachments, and local persi
 - Husky + lint-staged
 
 ## Scripts
-- `npm run dev` – start dev server
+
 - `npm run build` – build
 - `npm run preview` – preview build
 - `npm run lint` – ESLint
@@ -20,6 +32,7 @@ Kanban board with nested modals, Formik + Yup, file attachments, and local persi
 - `npm run format` – Prettier
 
 ## Setup
+
 ```bash
 npm install
 # optional tooling
@@ -33,4 +46,5 @@ npm run dev
 Tasks persist in localStorage under key `tm_tasks_v1`.
 
 ### Nested modal data passing
+
 The parent modal `CreateTaskModal` owns `assignee` state and opens `SelectAssigneeModal`. The child modal calls `onSelect(user)` to update the parent state. This keeps a single source of truth and avoids cross-modal form coupling.
