@@ -1,4 +1,15 @@
-import { DndContext, DragEndEvent, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  useDroppable,
+  closestCorners,
+} from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { memo, useMemo, useState } from 'react';
@@ -12,7 +23,7 @@ const COLUMNS: { id: ColumnStatus; title: string }[] = [
 ];
 
 export function KanbanBoard({ tasks }: { tasks: Task[] }) {
-  const { moveTask, removeTask } = useTasks();
+  const { moveTask } = useTasks();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const columns = useMemo(() => {
@@ -65,7 +76,12 @@ export function KanbanBoard({ tasks }: { tasks: Task[] }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      >
         {columns.map((col) => (
           <Column key={col.id} id={col.id} title={col.title} items={col.items} />
         ))}
@@ -78,24 +94,32 @@ export function KanbanBoard({ tasks }: { tasks: Task[] }) {
 }
 
 function Column({ id, title, items }: { id: ColumnStatus; title: string; items: Task[] }) {
+  // Make the entire column body droppable so dropping anywhere is valid
+  const { setNodeRef: setColDropRef } = useDroppable({
+    id: `column:${id}`,
+    data: { type: 'slot' as const, column: id, index: items.length },
+  });
+
   return (
     <div className="rounded-lg bg-gray-100 p-3">
       <h3 className="mb-3 font-medium">{title}</h3>
       {/* Use stable ids to avoid remounting/jitter */}
-      <SortableContext items={items.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-3">
-          {items.map((task, index) => (
-            <SortableTask key={task.id} task={task} column={id} index={index} />
-          ))}
-          {/* droppable area for new last position */}
-          <DropSlot column={id} index={items.length} />
-        </div>
-      </SortableContext>
+      <div ref={setColDropRef}>
+        <SortableContext items={items.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {items.map((task) => (
+              <SortableTask key={task.id} task={task} column={id} />
+            ))}
+            {/* droppable area for new last position */}
+            <DropSlot column={id} index={items.length} />
+          </div>
+        </SortableContext>
+      </div>
     </div>
   );
 }
 
-function SortableTask({ task, column, index }: { task: Task; column: ColumnStatus; index: number }) {
+function SortableTask({ task, column }: { task: Task; column: ColumnStatus }) {
   const { removeTask } = useTasks();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -111,8 +135,11 @@ function SortableTask({ task, column, index }: { task: Task; column: ColumnStatu
 }
 
 function DropSlot({ column, index }: { column: ColumnStatus; index: number }) {
-  const { setNodeRef } = useSortable({ id: `slot:${column}:${index}`, data: { type: 'slot' as const, column, index } });
-  return <div ref={setNodeRef} className="h-2" />;
+  const { setNodeRef } = useDroppable({
+    id: `slot:${column}:${index}`,
+    data: { type: 'slot' as const, column, index },
+  });
+  return <div ref={setNodeRef} className="h-6" />;
 }
 
 const TaskCard = memo(function TaskCard({
@@ -153,8 +180,8 @@ const TaskCard = memo(function TaskCard({
             (task.priority === 'low'
               ? 'bg-green-100 text-green-700'
               : task.priority === 'medium'
-              ? 'bg-yellow-100 text-yellow-800'
-              : 'bg-red-100 text-red-700')
+                ? 'bg-yellow-100 text-yellow-800'
+                : 'bg-red-100 text-red-700')
           }
         >
           {task.priority}
